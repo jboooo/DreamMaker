@@ -1,0 +1,72 @@
+	public void DELETE()throws Throwable {                          //刪除
+	setValue("field1","hello");
+	Vector vt=new Vector();
+
+	//取得日期及使用者
+	String mdate = datetime.getToday("YYYY/mm/dd");
+	String mtime = datetime.getTime("h:m:s");
+	String wrkdate = mdate+ " " + mtime; 			   //取得Wrkdate
+	String mUser=getUser();  //取得系統操作者
+	String idkey=getValue("idkey");
+	String meid=getValue("meid");
+	String gckey=getGcKey();
+
+	String sql="insert into wptlproc_wrkman(gckey,idkey,meid,procWrkman,modDateTime,state)"
+	           +" VALUES ('"+gckey+"','"+idkey+"','"+meid+"','"+mUser+"',"+noDateToNull(wrkdate)+",'DEL')";
+	vt.add(sql);
+	sa.append("\n 新增DEL,wptlproc_wrkman :\n"+sql);                        //檢查點
+	setValue("field1",sa.toString());                       //檢查
+	//還原bk內的資料
+	sql="select bk from wptlproc where idkey='"+idkey+"'";
+	sa.append("\nbk:\n"+sql);
+	setValue("field1",sa.toString());                       //檢查
+	String[][] retBk=t.queryFromPool(sql);
+	if(retBk.length>0) {
+		sa.append("\nBK\n"+retBk[0][0]);
+		setValue("field1",sa.toString());                       //檢查
+//		JSONArray array=JSONArray.fromObject(retBk[0][0].trim());
+//		sa.append("\narray:"+array.toString());
+//		setValue("field1",sa.toString());                       //檢查		
+		JSONObject jsonObject=JSONObject.fromObject(retBk[0][0].trim());
+		sa.append("\njsonObject:"+jsonObject.toString());
+		setValue("field1",sa.toString());                       //檢查		
+		String jsTable=(String)jsonObject.get("table");
+		sa.append("\ntable:"+jsTable);
+		setValue("field1",sa.toString());                       //檢查
+		JSONArray field=jsonObject.getJSONArray("field");
+		sa.append("\nfield:"+field.toString());
+		setValue("field1",sa.toString());                       //檢查
+		for(int i=0; i<field.size(); i++) {
+			JSONObject data=field.getJSONObject(i);
+			String jsIdkey=(String)data.get("idkey");
+			String jsFndate=(String)data.get("findate");
+			String jsWrkdate=(String)data.get("wrkdate");
+			String JsWrkman=(String)data.get("wrkman");
+			sql= "update "+jsTable+" set findate="+noDateToNull(jsFndate)+",wrkdate="+noDateToNull(jsWrkdate)+",wrkman='"+JsWrkman+"' where idkey='"+jsIdkey+"'";
+			vt.add(sql);
+			sa.append("\n回存wptlproc:"+sql);
+			setValue("field1",sa.toString());                       //檢查
+		}
+	}
+	setValue("field1",sa.toString());                       //檢查
+	sql="update wptlproc set jobmark='',findate=null,wrkdate="+noDateToNull(mdate)+" where idkey='"+idkey+"'";
+	vt.add(sql);
+	sa.append("\n更新wptlproc:"+sql);
+
+	sql="update wptmapply set Auditid='',Regdate=null,Regid='',Ownsdate=null"
+	    +",Ownedate=null,Regstat='',Chkdoc='',AgreeRegNo='',Extesay='' where meid='"+meid+"'";
+	vt.add(sql);
+	sa.append("\n刪除wptmapply資料:\n"+sql);
+	
+	setValue("field1",sa.toString());                       //檢查
+	String[] vtSql=(String[])vt.toArray(new String[0]);
+
+
+	try {
+		t.execFromPool(vtSql);
+		message("更新成功");
+	} catch(Exception e) {
+		message("更新失敗"+e);
+	}
+	return ;
+	}
